@@ -10,6 +10,7 @@ public final class ArsenicPlugin extends JavaPlugin {
     private AlertService alertService;
     private ReportStore reportStore;
     private me.evisual.arsenic.bukkit.gui.ReportGuiService reportGuiService;
+    private me.evisual.arsenic.bukkit.checks.autoclicker.AutoClickerService autoClickerService;
 
     @Override
     public void onEnable() {
@@ -36,6 +37,9 @@ public final class ArsenicPlugin extends JavaPlugin {
             getCommand("arsenic").setTabCompleter(command);
             getServer().getPluginManager().registerEvents(new me.evisual.arsenic.bukkit.gui.ReportGuiListener(reportGuiService), this);
         }
+
+        autoClickerService = new me.evisual.arsenic.bukkit.checks.autoclicker.AutoClickerService(this, configService, alertService);
+        getServer().getPluginManager().registerEvents(new me.evisual.arsenic.bukkit.checks.autoclicker.AutoClickerListener(autoClickerService), this);
         getLogger().info("Arsenic enabled.");
     }
 
@@ -69,5 +73,9 @@ public final class ArsenicPlugin extends JavaPlugin {
 
     public me.evisual.arsenic.bukkit.gui.ReportGuiService getReportGuiService() {
         return reportGuiService;
+    }
+
+    public me.evisual.arsenic.bukkit.checks.autoclicker.AutoClickerService getAutoClickerService() {
+        return autoClickerService;
     }
 }

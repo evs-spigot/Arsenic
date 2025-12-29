@@ -48,6 +48,9 @@ public final class ArsenicCommand implements CommandExecutor, TabCompleter {
         if (args[0].equalsIgnoreCase("report")) {
             return handleReport(sender, args);
         }
+        if (args[0].equalsIgnoreCase("reload")) {
+            return handleReload(sender);
+        }
         if (args[0].equalsIgnoreCase("clearlogs")) {
             return handleClearLogs(sender, args);
         }
@@ -55,7 +58,7 @@ public final class ArsenicCommand implements CommandExecutor, TabCompleter {
             return handleClearAll(sender);
         }
 
-        sender.sendMessage(ChatColor.RED + "Unknown subcommand. Try /arsenic testalert | /arsenic report <player> | /arsenic clearlogs <player> | /arsenic clearall");
+        sender.sendMessage(ChatColor.RED + "Unknown subcommand. Try /arsenic testalert | /arsenic report <player> | /arsenic reload | /arsenic clearlogs <player> | /arsenic clearall");
         return true;
     }
 
@@ -65,6 +68,7 @@ public final class ArsenicCommand implements CommandExecutor, TabCompleter {
             return suggestPrefix(args[0],
                     "testalert",
                     "report",
+                    "reload",
                     "clearlogs",
                     "clearall");
         }
@@ -203,6 +207,17 @@ public final class ArsenicCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(ChatColor.RED + "Failed to clear data. Check console.");
             plugin.getLogger().warning("Failed to clear all data: " + ex.getMessage());
         }
+        return true;
+    }
+
+    private boolean handleReload(CommandSender sender) {
+        if (!sender.hasPermission("arsenic.command")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
+            return true;
+        }
+        plugin.reloadConfig();
+        plugin.getMessageService().reload();
+        sender.sendMessage(ChatColor.GREEN + "Arsenic reloaded.");
         return true;
     }
 

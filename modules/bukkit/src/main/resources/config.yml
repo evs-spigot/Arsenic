@@ -7,3 +7,21 @@ database:
   type: "sqlite"
   sqlite:
     file: "arsenic.db"
+
+checks:
+  autoclicker:
+    enabled: true
+    cps:
+      enabled: true
+      threshold: 15
+      cooldown-ms: 1500
+      name: "Autoclicker CPS"
+      detail: "CPS={cps}"
+    consistency:
+      enabled: true
+      min-samples: 12
+      max-stddev-ms: 3.5
+      min-cps: 10.0
+      cooldown-ms: 2500
+      name: "Autoclicker Consistency"
+      detail: "avg={avg}ms std={std}ms cps={cps}"

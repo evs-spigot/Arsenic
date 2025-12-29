@@ -6,7 +6,7 @@ softdepend: [ProtocolLib]
 commands:
   arsenic:
     description: Arsenic admin command
-    usage: /arsenic testalert | /arsenic report <player> | /arsenic clearlogs <player> | /arsenic clearall
+    usage: /arsenic testalert | /arsenic report <player> | /arsenic reload | /arsenic clearlogs <player> | /arsenic clearall
     permission: arsenic.command
     aliases: [as]
 permissions:
