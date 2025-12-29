@@ -22,4 +22,12 @@ public final class ConfigService {
     public String getString(String path) {
         return getConfig().getString(path, "");
     }
+
+    public String getString(String path, String defaultValue) {
+        String value = getConfig().getString(path);
+        if (value == null || value.trim().isEmpty()) {
+            return defaultValue;
+        }
+        return value;
+    }
 }

@@ -1,2 +1,9 @@
 alerts:
-  format: "&c[Arsenic] &7{player} &f{check} &7VL{vl} &8({detail})"
+  format: "&c[Arsenic] &f{player} &7failed {check} &fVL{vl} &8({detail})"
+reports:
+  header: "&c[Arsenic] &7Report for &f{player}"
+  total-alerts: "&7Total alerts: &f{total}"
+  last-alert: "&7Last alert: &f{time}"
+  last-check: "&7Last check: &f{check} &8({severity})"
+  last-detail: "&7Last detail: &f{detail}"
+  no-data: "&cNo report data found for &f{player}&c."

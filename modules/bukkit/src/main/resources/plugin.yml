@@ -6,9 +6,19 @@ softdepend: [ProtocolLib]
 commands:
   arsenic:
     description: Arsenic admin command
-    usage: /arsenic testalert
+    usage: /arsenic testalert | /arsenic report <player> | /arsenic clearlogs <player> | /arsenic clearall
     permission: arsenic.command
+    aliases: [as]
 permissions:
   arsenic.command:
     description: Allows access to Arsenic commands
+    default: op
+  arsenic.report:
+    description: Allows viewing player reports
+    default: op
+  arsenic.clear.logs:
+    description: Allows clearing a player's alert logs
+    default: op
+  arsenic.clear.all:
+    description: Allows clearing all player data
     default: op

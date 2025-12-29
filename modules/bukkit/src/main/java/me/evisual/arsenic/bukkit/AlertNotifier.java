@@ -28,7 +28,7 @@ public final class AlertNotifier implements AlertSink {
         placeholders.put("check", alert.getCheckName());
         placeholders.put("vl", Integer.toString(alert.getViolationLevel()));
         placeholders.put("detail", alert.getDetail());
-        placeholders.put("severity", alert.getSeverity().name());
+        placeholders.put("severity", colorizeSeverity(alert.getSeverity().name()));
 
         String formatted = messageService.format("alerts.format", placeholders);
         if (configService.getBoolean("alerts.log-to-console")) {
@@ -42,5 +42,21 @@ public final class AlertNotifier implements AlertSink {
                 }
             }
         }
+    }
+
+    private String colorizeSeverity(String severity) {
+        if ("HIGH".equalsIgnoreCase(severity)) {
+            return ChatColor.RED + severity;
+        }
+        if ("MEDIUM".equalsIgnoreCase(severity)) {
+            return ChatColor.YELLOW + severity;
+        }
+        if ("LOW".equalsIgnoreCase(severity)) {
+            return ChatColor.GOLD + severity;
+        }
+        if ("CRITICAL".equalsIgnoreCase(severity)) {
+            return ChatColor.DARK_RED + severity;
+        }
+        return severity;
     }
 }

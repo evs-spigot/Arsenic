@@ -2,3 +2,8 @@ alerts:
   notify-staff: true
   log-to-console: true
   staff-permission: "arsenic.alerts"
+
+database:
+  type: "sqlite"
+  sqlite:
+    file: "arsenic.db"
