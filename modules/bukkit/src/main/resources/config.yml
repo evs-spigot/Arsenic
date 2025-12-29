@@ -1,0 +1,4 @@
+alerts:
+  notify-staff: true
+  log-to-console: true
+  staff-permission: "arsenic.alerts"

@@ -1,0 +1,14 @@
+name: Arsenic
+main: me.evisual.arsenic.bukkit.ArsenicPlugin
+version: ${project.version}
+author: evisual
+softdepend: [ProtocolLib]
+commands:
+  arsenic:
+    description: Arsenic admin command
+    usage: /arsenic testalert
+    permission: arsenic.command
+permissions:
+  arsenic.command:
+    description: Allows access to Arsenic commands
+    default: op

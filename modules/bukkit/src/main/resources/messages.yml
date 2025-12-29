@@ -1,0 +1,2 @@
+alerts:
+  format: "&c[Arsenic] &7{player} &f{check} &7VL{vl} &8({detail})"
