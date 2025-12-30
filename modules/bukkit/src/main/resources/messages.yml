@@ -9,4 +9,10 @@ reports:
   first-join: "&7First joined: &f{first_join}"
   session-start: "&7Session start: &f{session_start}"
   session-length: "&7Session length: &f{session_length}"
+  trust-score: "&7Trust score: &f{trust_score}"
   no-data: "&cNo report data found for &f{player}&c."
+ban-waves:
+  none: "&7Ban wave executed: &f0 &7players"
+  banned: "&cBan wave: banned &f{player}"
+  skipped: "&eBan wave: skipped &f{player}"
+  summary: "&7Ban wave completed: &f{banned} &7banned, &f{skipped} &7skipped"

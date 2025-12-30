@@ -12,6 +12,8 @@ public final class ArsenicPlugin extends JavaPlugin {
     private me.evisual.arsenic.bukkit.gui.ReportGuiService reportGuiService;
     private me.evisual.arsenic.bukkit.checks.autoclicker.AutoClickerService autoClickerService;
     private me.evisual.arsenic.bukkit.session.SessionService sessionService;
+    private me.evisual.arsenic.bukkit.trust.TrustScoreService trustScoreService;
+    private me.evisual.arsenic.bukkit.banwaves.BanWaveService banWaveService;
 
     @Override
     public void onEnable() {
@@ -25,6 +27,8 @@ public final class ArsenicPlugin extends JavaPlugin {
         try {
             reportStore.init();
             alertService.registerSink(new me.evisual.arsenic.bukkit.storage.AlertPersistenceSink(reportStore, getLogger()));
+            banWaveService = new me.evisual.arsenic.bukkit.banwaves.BanWaveService(this, reportStore);
+            alertService.registerSink(new me.evisual.arsenic.bukkit.banwaves.BanWaveAlertSink(banWaveService));
         } catch (Exception ex) {
             getLogger().severe("Failed to initialize report database: " + ex.getMessage());
             getServer().getPluginManager().disablePlugin(this);
@@ -32,10 +36,11 @@ public final class ArsenicPlugin extends JavaPlugin {
         }
 
         if (getCommand("arsenic") != null) {
-            reportGuiService = new me.evisual.arsenic.bukkit.gui.ReportGuiService(this, reportStore);
+            trustScoreService = new me.evisual.arsenic.bukkit.trust.TrustScoreService(this, reportStore);
+            reportGuiService = new me.evisual.arsenic.bukkit.gui.ReportGuiService(this, reportStore, trustScoreService);
             sessionService = new me.evisual.arsenic.bukkit.session.SessionService();
             getServer().getPluginManager().registerEvents(new me.evisual.arsenic.bukkit.session.SessionListener(sessionService), this);
-            me.evisual.arsenic.bukkit.command.ArsenicCommand command = new me.evisual.arsenic.bukkit.command.ArsenicCommand(this, reportStore, reportGuiService, sessionService);
+            me.evisual.arsenic.bukkit.command.ArsenicCommand command = new me.evisual.arsenic.bukkit.command.ArsenicCommand(this, reportStore, reportGuiService, sessionService, trustScoreService);
             getCommand("arsenic").setExecutor(command);
             getCommand("arsenic").setTabCompleter(command);
             getServer().getPluginManager().registerEvents(new me.evisual.arsenic.bukkit.gui.ReportGuiListener(reportGuiService), this);
@@ -49,11 +54,18 @@ public final class ArsenicPlugin extends JavaPlugin {
             getLogger().warning("ProtocolLib not found; autoclicker detection is using fallback events.");
             getServer().getPluginManager().registerEvents(new me.evisual.arsenic.bukkit.checks.autoclicker.AutoClickerListener(autoClickerService), this);
         }
+
+        if (banWaveService != null) {
+            banWaveService.start();
+        }
         getLogger().info("Arsenic enabled.");
     }
 
     @Override
     public void onDisable() {
+        if (banWaveService != null) {
+            banWaveService.stop();
+        }
         if (reportStore != null) {
             try {
                 reportStore.close();
@@ -90,5 +102,13 @@ public final class ArsenicPlugin extends JavaPlugin {
 
     public me.evisual.arsenic.bukkit.session.SessionService getSessionService() {
         return sessionService;
+    }
+
+    public me.evisual.arsenic.bukkit.trust.TrustScoreService getTrustScoreService() {
+        return trustScoreService;
+    }
+
+    public me.evisual.arsenic.bukkit.banwaves.BanWaveService getBanWaveService() {
+        return banWaveService;
     }
 }

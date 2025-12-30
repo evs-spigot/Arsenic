@@ -32,10 +32,14 @@ public final class ReportGuiService {
 
     private final ArsenicPlugin plugin;
     private final ReportStore reportStore;
+    private final me.evisual.arsenic.bukkit.trust.TrustScoreService trustScoreService;
 
-    public ReportGuiService(ArsenicPlugin plugin, ReportStore reportStore) {
+    public ReportGuiService(ArsenicPlugin plugin,
+                            ReportStore reportStore,
+                            me.evisual.arsenic.bukkit.trust.TrustScoreService trustScoreService) {
         this.plugin = plugin;
         this.reportStore = reportStore;
+        this.trustScoreService = trustScoreService;
     }
 
     public void openReport(Player viewer, UUID targetId, String targetName) {
@@ -79,6 +83,8 @@ public final class ReportGuiService {
         String firstJoin = formatFirstPlayed(targetId);
         String sessionStart = formatSessionStart(targetId);
         String sessionDuration = formatSessionDuration(targetId);
+        int trustScore = trustScoreService == null ? 100 : trustScoreService.computeScore(targetId);
+        int trustMax = trustScoreService == null ? 100 : trustScoreService.getMaxScore();
 
         inventory.setItem(10, buildPlayerHead(targetId, targetName));
         inventory.setItem(12, buildItem(Material.PAPER, ChatColor.GOLD + "Alerts Summary",
@@ -96,6 +102,8 @@ public final class ReportGuiService {
                 lore(ChatColor.GRAY + "Time: " + ChatColor.WHITE + sessionStart)));
         inventory.setItem(22, buildItem(resolveMaterial("MAP", "MAP"), ChatColor.YELLOW + "Session Length",
                 lore(ChatColor.GRAY + "Duration: " + ChatColor.WHITE + sessionDuration)));
+        inventory.setItem(23, buildItem(resolveMaterial("EMERALD", "EMERALD"), ChatColor.GREEN + "Trust Score",
+                lore(ChatColor.GRAY + "Score: " + ChatColor.WHITE + trustScore + "/" + trustMax)));
 
         inventory.setItem(40, buildItem(Material.CHEST, ChatColor.RED + "Open Logs",
                 lore(ChatColor.GRAY + "Click to view alert history")));

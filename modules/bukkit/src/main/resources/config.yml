@@ -42,3 +42,26 @@ checks:
       cooldown-ms: 3000
       name: "Autoclicker TickAlign"
       detail: "aligned={aligned} cps={cps}"
+
+trust-score:
+  base: 100
+  min: 0
+  max: 100
+  sample-size: 50
+  half-life-hours: 12.0
+  vl-scale: 10.0
+  severity-weights:
+    low: 1.0
+    medium: 2.0
+    high: 4.0
+    critical: 8.0
+    unknown: 1.0
+
+ban-waves:
+  enabled: false
+  threshold: 10
+  interval-minutes: 30
+  command: "/ban {player}"
+  broadcast:
+    enabled: true
+    include-skipped: true

@@ -27,15 +27,18 @@ public final class ArsenicCommand implements CommandExecutor, TabCompleter {
     private final ReportStore reportStore;
     private final me.evisual.arsenic.bukkit.gui.ReportGuiService reportGuiService;
     private final me.evisual.arsenic.bukkit.session.SessionService sessionService;
+    private final me.evisual.arsenic.bukkit.trust.TrustScoreService trustScoreService;
 
     public ArsenicCommand(ArsenicPlugin plugin,
                           ReportStore reportStore,
                           me.evisual.arsenic.bukkit.gui.ReportGuiService reportGuiService,
-                          me.evisual.arsenic.bukkit.session.SessionService sessionService) {
+                          me.evisual.arsenic.bukkit.session.SessionService sessionService,
+                          me.evisual.arsenic.bukkit.trust.TrustScoreService trustScoreService) {
         this.plugin = plugin;
         this.reportStore = reportStore;
         this.reportGuiService = reportGuiService;
         this.sessionService = sessionService;
+        this.trustScoreService = trustScoreService;
     }
 
     @Override
@@ -168,6 +171,9 @@ public final class ArsenicCommand implements CommandExecutor, TabCompleter {
         placeholders.put("first_join", formatTimestamp(getFirstPlayed(target)));
         placeholders.put("session_start", formatSessionStart(target));
         placeholders.put("session_length", formatSessionLength(target));
+        int trustScore = trustScoreService == null ? 100 : trustScoreService.computeScore(target.getUniqueId());
+        int trustMax = trustScoreService == null ? 100 : trustScoreService.getMaxScore();
+        placeholders.put("trust_score", trustScore + "/" + trustMax);
 
         sender.sendMessage(plugin.getMessageService().format("reports.header", placeholders));
         sender.sendMessage(plugin.getMessageService().format("reports.total-alerts", placeholders));
@@ -177,6 +183,7 @@ public final class ArsenicCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(plugin.getMessageService().format("reports.first-join", placeholders));
         sender.sendMessage(plugin.getMessageService().format("reports.session-start", placeholders));
         sender.sendMessage(plugin.getMessageService().format("reports.session-length", placeholders));
+        sender.sendMessage(plugin.getMessageService().format("reports.trust-score", placeholders));
         return true;
     }
 
