@@ -6,4 +6,7 @@ reports:
   last-alert: "&7Last alert: &f{time}"
   last-check: "&7Last check: &f{check} &8({severity})"
   last-detail: "&7Last detail: &f{detail}"
+  first-join: "&7First joined: &f{first_join}"
+  session-start: "&7Session start: &f{session_start}"
+  session-length: "&7Session length: &f{session_length}"
   no-data: "&cNo report data found for &f{player}&c."

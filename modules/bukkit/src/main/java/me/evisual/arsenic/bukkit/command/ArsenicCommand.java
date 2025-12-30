@@ -26,13 +26,16 @@ public final class ArsenicCommand implements CommandExecutor, TabCompleter {
     private final ArsenicPlugin plugin;
     private final ReportStore reportStore;
     private final me.evisual.arsenic.bukkit.gui.ReportGuiService reportGuiService;
+    private final me.evisual.arsenic.bukkit.session.SessionService sessionService;
 
     public ArsenicCommand(ArsenicPlugin plugin,
                           ReportStore reportStore,
-                          me.evisual.arsenic.bukkit.gui.ReportGuiService reportGuiService) {
+                          me.evisual.arsenic.bukkit.gui.ReportGuiService reportGuiService,
+                          me.evisual.arsenic.bukkit.session.SessionService sessionService) {
         this.plugin = plugin;
         this.reportStore = reportStore;
         this.reportGuiService = reportGuiService;
+        this.sessionService = sessionService;
     }
 
     @Override
@@ -162,12 +165,18 @@ public final class ArsenicCommand implements CommandExecutor, TabCompleter {
         placeholders.put("check", data.getLastCheck());
         placeholders.put("detail", data.getLastDetail());
         placeholders.put("severity", data.getLastSeverity());
+        placeholders.put("first_join", formatTimestamp(getFirstPlayed(target)));
+        placeholders.put("session_start", formatSessionStart(target));
+        placeholders.put("session_length", formatSessionLength(target));
 
         sender.sendMessage(plugin.getMessageService().format("reports.header", placeholders));
         sender.sendMessage(plugin.getMessageService().format("reports.total-alerts", placeholders));
         sender.sendMessage(plugin.getMessageService().format("reports.last-alert", placeholders));
         sender.sendMessage(plugin.getMessageService().format("reports.last-check", placeholders));
         sender.sendMessage(plugin.getMessageService().format("reports.last-detail", placeholders));
+        sender.sendMessage(plugin.getMessageService().format("reports.first-join", placeholders));
+        sender.sendMessage(plugin.getMessageService().format("reports.session-start", placeholders));
+        sender.sendMessage(plugin.getMessageService().format("reports.session-length", placeholders));
         return true;
     }
 
@@ -240,5 +249,54 @@ public final class ArsenicCommand implements CommandExecutor, TabCompleter {
             return "Never";
         }
         return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date(timestamp));
+    }
+
+    private long getFirstPlayed(OfflinePlayer player) {
+        return player.getFirstPlayed();
+    }
+
+    private String formatSessionStart(OfflinePlayer player) {
+        if (sessionService == null) {
+            return "Offline";
+        }
+        Long start = sessionService.getSessionStart(player.getUniqueId());
+        if (start == null) {
+            return "Offline";
+        }
+        return formatTimestamp(start);
+    }
+
+    private String formatSessionLength(OfflinePlayer player) {
+        if (sessionService == null) {
+            return "Offline";
+        }
+        Long start = sessionService.getSessionStart(player.getUniqueId());
+        if (start == null) {
+            return "Offline";
+        }
+        return formatDuration(System.currentTimeMillis() - start);
+    }
+
+    private String formatDuration(long durationMs) {
+        long seconds = durationMs / 1000L;
+        long minutes = seconds / 60L;
+        long hours = minutes / 60L;
+        long days = hours / 24L;
+        seconds %= 60L;
+        minutes %= 60L;
+        hours %= 24L;
+
+        StringBuilder builder = new StringBuilder();
+        if (days > 0) {
+            builder.append(days).append("d ");
+        }
+        if (hours > 0) {
+            builder.append(hours).append("h ");
+        }
+        if (minutes > 0) {
+            builder.append(minutes).append("m ");
+        }
+        builder.append(seconds).append("s");
+        return builder.toString().trim();
     }
 }

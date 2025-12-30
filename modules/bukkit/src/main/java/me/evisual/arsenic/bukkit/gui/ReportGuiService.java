@@ -76,6 +76,10 @@ public final class ReportGuiService {
             plugin.getLogger().warning("Failed to load report: " + ex.getMessage());
         }
 
+        String firstJoin = formatFirstPlayed(targetId);
+        String sessionStart = formatSessionStart(targetId);
+        String sessionDuration = formatSessionDuration(targetId);
+
         inventory.setItem(10, buildPlayerHead(targetId, targetName));
         inventory.setItem(12, buildItem(Material.PAPER, ChatColor.GOLD + "Alerts Summary",
                 lore(ChatColor.GRAY + "Total: " + ChatColor.WHITE + (report.isPresent() ? report.get().getTotalAlerts() : 0),
@@ -86,6 +90,12 @@ public final class ReportGuiService {
                 lore(ChatColor.GRAY + "Detail: " + ChatColor.WHITE + (report.isPresent() ? report.get().getLastDetail() : "None"))));
         inventory.setItem(16, buildItem(Material.REDSTONE, ChatColor.YELLOW + "Last Severity",
                 lore(ChatColor.GRAY + "Severity: " + colorizeSeverity(report.isPresent() ? report.get().getLastSeverity() : "None"))));
+        inventory.setItem(20, buildItem(resolveMaterial("CLOCK", "WATCH"), ChatColor.YELLOW + "First Joined",
+                lore(ChatColor.GRAY + "Date: " + ChatColor.WHITE + firstJoin)));
+        inventory.setItem(21, buildItem(resolveMaterial("COMPASS", "COMPASS"), ChatColor.YELLOW + "Session Start",
+                lore(ChatColor.GRAY + "Time: " + ChatColor.WHITE + sessionStart)));
+        inventory.setItem(22, buildItem(resolveMaterial("MAP", "MAP"), ChatColor.YELLOW + "Session Length",
+                lore(ChatColor.GRAY + "Duration: " + ChatColor.WHITE + sessionDuration)));
 
         inventory.setItem(40, buildItem(Material.CHEST, ChatColor.RED + "Open Logs",
                 lore(ChatColor.GRAY + "Click to view alert history")));
@@ -252,6 +262,72 @@ public final class ReportGuiService {
             return "Never";
         }
         return DATE_FORMAT.format(new Date(timestamp));
+    }
+
+    private String formatFirstPlayed(UUID targetId) {
+        org.bukkit.OfflinePlayer offline = plugin.getServer().getOfflinePlayer(targetId);
+        long firstPlayed = offline.getFirstPlayed();
+        return firstPlayed <= 0L ? "Unknown" : DATE_FORMAT.format(new Date(firstPlayed));
+    }
+
+    private String formatSessionStart(UUID targetId) {
+        me.evisual.arsenic.bukkit.session.SessionService sessionService = plugin.getSessionService();
+        if (sessionService == null) {
+            return "Offline";
+        }
+        Long start = sessionService.getSessionStart(targetId);
+        if (start == null) {
+            return "Offline";
+        }
+        return DATE_FORMAT.format(new Date(start));
+    }
+
+    private String formatSessionDuration(UUID targetId) {
+        me.evisual.arsenic.bukkit.session.SessionService sessionService = plugin.getSessionService();
+        if (sessionService == null) {
+            return "Offline";
+        }
+        Long start = sessionService.getSessionStart(targetId);
+        if (start == null) {
+            return "Offline";
+        }
+        long duration = Math.max(0L, System.currentTimeMillis() - start);
+        return formatDuration(duration);
+    }
+
+    private String formatDuration(long durationMs) {
+        long seconds = durationMs / 1000L;
+        long minutes = seconds / 60L;
+        long hours = minutes / 60L;
+        long days = hours / 24L;
+        seconds %= 60L;
+        minutes %= 60L;
+        hours %= 24L;
+
+        StringBuilder builder = new StringBuilder();
+        if (days > 0) {
+            builder.append(days).append("d ");
+        }
+        if (hours > 0) {
+            builder.append(hours).append("h ");
+        }
+        if (minutes > 0) {
+            builder.append(minutes).append("m ");
+        }
+        builder.append(seconds).append("s");
+        return builder.toString().trim();
+    }
+
+    private Material resolveMaterial(String modern, String legacy) {
+        Material material = Material.getMaterial(modern);
+        if (material != null) {
+            return material;
+        }
+        material = Material.getMaterial(legacy);
+        if (material != null) {
+            return material;
+        }
+        return Material.PAPER;
     }
 
     private String formatSort(AlertLogSort sort) {

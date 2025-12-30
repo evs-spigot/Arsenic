@@ -11,6 +11,7 @@ public final class ArsenicPlugin extends JavaPlugin {
     private ReportStore reportStore;
     private me.evisual.arsenic.bukkit.gui.ReportGuiService reportGuiService;
     private me.evisual.arsenic.bukkit.checks.autoclicker.AutoClickerService autoClickerService;
+    private me.evisual.arsenic.bukkit.session.SessionService sessionService;
 
     @Override
     public void onEnable() {
@@ -32,14 +33,22 @@ public final class ArsenicPlugin extends JavaPlugin {
 
         if (getCommand("arsenic") != null) {
             reportGuiService = new me.evisual.arsenic.bukkit.gui.ReportGuiService(this, reportStore);
-            me.evisual.arsenic.bukkit.command.ArsenicCommand command = new me.evisual.arsenic.bukkit.command.ArsenicCommand(this, reportStore, reportGuiService);
+            sessionService = new me.evisual.arsenic.bukkit.session.SessionService();
+            getServer().getPluginManager().registerEvents(new me.evisual.arsenic.bukkit.session.SessionListener(sessionService), this);
+            me.evisual.arsenic.bukkit.command.ArsenicCommand command = new me.evisual.arsenic.bukkit.command.ArsenicCommand(this, reportStore, reportGuiService, sessionService);
             getCommand("arsenic").setExecutor(command);
             getCommand("arsenic").setTabCompleter(command);
             getServer().getPluginManager().registerEvents(new me.evisual.arsenic.bukkit.gui.ReportGuiListener(reportGuiService), this);
         }
 
         autoClickerService = new me.evisual.arsenic.bukkit.checks.autoclicker.AutoClickerService(this, configService, alertService);
-        getServer().getPluginManager().registerEvents(new me.evisual.arsenic.bukkit.checks.autoclicker.AutoClickerListener(autoClickerService), this);
+        if (getServer().getPluginManager().getPlugin("ProtocolLib") != null) {
+            com.comphenix.protocol.ProtocolLibrary.getProtocolManager()
+                    .addPacketListener(new me.evisual.arsenic.bukkit.checks.autoclicker.AutoClickerPacketListener(this, autoClickerService));
+        } else {
+            getLogger().warning("ProtocolLib not found; autoclicker detection is using fallback events.");
+            getServer().getPluginManager().registerEvents(new me.evisual.arsenic.bukkit.checks.autoclicker.AutoClickerListener(autoClickerService), this);
+        }
         getLogger().info("Arsenic enabled.");
     }
 
@@ -77,5 +86,9 @@ public final class ArsenicPlugin extends JavaPlugin {
 
     public me.evisual.arsenic.bukkit.checks.autoclicker.AutoClickerService getAutoClickerService() {
         return autoClickerService;
+    }
+
+    public me.evisual.arsenic.bukkit.session.SessionService getSessionService() {
+        return sessionService;
     }
 }

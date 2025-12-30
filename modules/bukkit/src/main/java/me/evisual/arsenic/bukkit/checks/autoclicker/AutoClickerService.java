@@ -29,14 +29,16 @@ public final class AutoClickerService {
         this.alertService = alertService;
     }
 
-    public void handleSwing(Player player) {
+    public void handleClick(Player player, long now, boolean ignoreBecauseDigging) {
         if (!config.getBoolean("checks.autoclicker.enabled")) {
             return;
         }
         if (player.getGameMode() == GameMode.CREATIVE || player.getGameMode() == GameMode.SPECTATOR) {
             return;
         }
-        long now = System.currentTimeMillis();
+        if (ignoreBecauseDigging) {
+            return;
+        }
         ClickHistory history = histories.computeIfAbsent(player.getUniqueId(), id -> new ClickHistory());
         history.addClick(now);
 
@@ -46,6 +48,16 @@ public final class AutoClickerService {
         if (config.getBoolean("checks.autoclicker.consistency.enabled")) {
             evaluateConsistency(player, history, now);
         }
+        if (config.getBoolean("checks.autoclicker.pattern.enabled")) {
+            evaluatePattern(player, history, now);
+        }
+        if (config.getBoolean("checks.autoclicker.tick-align.enabled")) {
+            evaluateTickAlign(player, history, now);
+        }
+    }
+
+    public void handleClick(Player player, long now) {
+        handleClick(player, now, false);
     }
 
     private void evaluateCps(Player player, ClickHistory history, long now) {
@@ -107,6 +119,80 @@ public final class AutoClickerService {
         }
     }
 
+    private void evaluatePattern(Player player, ClickHistory history, long now) {
+        int minSamples = config.getConfig().getInt("checks.autoclicker.pattern.min-samples", 16);
+        double minCps = config.getConfig().getDouble("checks.autoclicker.pattern.min-cps", 9.0);
+        double maxModeRatio = config.getConfig().getDouble("checks.autoclicker.pattern.max-mode-ratio", 0.65);
+        long cooldown = config.getConfig().getLong("checks.autoclicker.pattern.cooldown-ms", 3000L);
+
+        if (!history.hasSamples(minSamples + 1)) {
+            return;
+        }
+        double[] intervals = history.lastIntervals(minSamples);
+        double mean = mean(intervals);
+        if (mean <= 0.0) {
+            return;
+        }
+        double cps = 1000.0 / mean;
+        if (cps < minCps) {
+            return;
+        }
+        double modeRatio = modeRatio(intervals);
+        if (modeRatio >= maxModeRatio && history.canAlert("pattern", now, cooldown)) {
+            history.markAlert("pattern", now);
+            String name = config.getString("checks.autoclicker.pattern.name", "Autoclicker Pattern");
+            String detailTemplate = config.getString("checks.autoclicker.pattern.detail", "mode={mode} cps={cps}");
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("mode", formatDouble(modeRatio * 100.0) + "%");
+            placeholders.put("cps", formatDouble(cps));
+            String detail = MessageFormatter.applyPlaceholders(detailTemplate, placeholders);
+            alertService.publish(new Alert(player.getUniqueId(),
+                    player.getName(),
+                    name,
+                    AlertSeverity.MEDIUM,
+                    (int) Math.round(cps),
+                    detail,
+                    now));
+        }
+    }
+
+    private void evaluateTickAlign(Player player, ClickHistory history, long now) {
+        int minSamples = config.getConfig().getInt("checks.autoclicker.tick-align.min-samples", 20);
+        double minCps = config.getConfig().getDouble("checks.autoclicker.tick-align.min-cps", 10.0);
+        double minAlignedRatio = config.getConfig().getDouble("checks.autoclicker.tick-align.min-aligned-ratio", 0.8);
+        int toleranceMs = config.getConfig().getInt("checks.autoclicker.tick-align.tolerance-ms", 3);
+        long cooldown = config.getConfig().getLong("checks.autoclicker.tick-align.cooldown-ms", 3000L);
+
+        if (!history.hasSamples(minSamples)) {
+            return;
+        }
+        long[] clicks = history.lastClicks(minSamples);
+        if (clicks.length < minSamples) {
+            return;
+        }
+        double cps = computeCps(clicks);
+        if (cps < minCps) {
+            return;
+        }
+        double alignedRatio = alignedRatio(clicks, toleranceMs);
+        if (alignedRatio >= minAlignedRatio && history.canAlert("tick-align", now, cooldown)) {
+            history.markAlert("tick-align", now);
+            String name = config.getString("checks.autoclicker.tick-align.name", "Autoclicker TickAlign");
+            String detailTemplate = config.getString("checks.autoclicker.tick-align.detail", "aligned={aligned} cps={cps}");
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("aligned", formatDouble(alignedRatio * 100.0) + "%");
+            placeholders.put("cps", formatDouble(cps));
+            String detail = MessageFormatter.applyPlaceholders(detailTemplate, placeholders);
+            alertService.publish(new Alert(player.getUniqueId(),
+                    player.getName(),
+                    name,
+                    AlertSeverity.LOW,
+                    (int) Math.round(cps),
+                    detail,
+                    now));
+        }
+    }
+
     private double mean(double[] values) {
         double sum = 0.0;
         for (double value : values) {
@@ -122,6 +208,45 @@ public final class AutoClickerService {
             sum += diff * diff;
         }
         return Math.sqrt(sum / values.length);
+    }
+
+    private double modeRatio(double[] values) {
+        Map<Long, Integer> counts = new HashMap<>();
+        int max = 0;
+        for (double value : values) {
+            long rounded = Math.round(value);
+            int count = counts.getOrDefault(rounded, 0) + 1;
+            counts.put(rounded, count);
+            if (count > max) {
+                max = count;
+            }
+        }
+        if (values.length == 0) {
+            return 0.0;
+        }
+        return (double) max / (double) values.length;
+    }
+
+    private double alignedRatio(long[] clicks, int toleranceMs) {
+        int aligned = 0;
+        for (long click : clicks) {
+            long mod = click % 50L;
+            long distance = Math.min(mod, 50L - mod);
+            if (distance <= toleranceMs) {
+                aligned++;
+            }
+        }
+        return clicks.length == 0 ? 0.0 : (double) aligned / (double) clicks.length;
+    }
+
+    private double computeCps(long[] clicks) {
+        if (clicks.length < 2) {
+            return 0.0;
+        }
+        long first = clicks[0];
+        long last = clicks[clicks.length - 1];
+        long span = Math.max(1L, last - first);
+        return (clicks.length - 1) * 1000.0 / span;
     }
 
     private String formatDouble(double value) {
@@ -164,6 +289,18 @@ public final class AutoClickerService {
                 intervals[i] = Math.max(1L, current - previous);
             }
             return intervals;
+        }
+
+        long[] lastClicks(int count) {
+            int available = clicks.size();
+            int start = Math.max(0, available - count);
+            long[] result = new long[Math.min(count, available)];
+            Object[] arr = clicks.toArray();
+            int index = 0;
+            for (int i = start; i < arr.length; i++) {
+                result[index++] = (Long) arr[i];
+            }
+            return result;
         }
 
         boolean canAlert(String key, long now, long cooldownMs) {

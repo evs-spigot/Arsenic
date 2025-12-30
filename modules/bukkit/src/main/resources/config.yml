@@ -25,3 +25,20 @@ checks:
       cooldown-ms: 2500
       name: "Autoclicker Consistency"
       detail: "avg={avg}ms std={std}ms cps={cps}"
+    pattern:
+      enabled: true
+      min-samples: 16
+      min-cps: 9.0
+      max-mode-ratio: 0.65
+      cooldown-ms: 3000
+      name: "Autoclicker Pattern"
+      detail: "mode={mode} cps={cps}"
+    tick-align:
+      enabled: true
+      min-samples: 20
+      min-cps: 10.0
+      min-aligned-ratio: 0.8
+      tolerance-ms: 3
+      cooldown-ms: 3000
+      name: "Autoclicker TickAlign"
+      detail: "aligned={aligned} cps={cps}"
