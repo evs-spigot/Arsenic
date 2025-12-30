@@ -29,7 +29,7 @@ public final class AutoClickerService {
         this.alertService = alertService;
     }
 
-    public void handleClick(Player player, long now, boolean ignoreBecauseDigging) {
+    public void handleClick(Player player, long now, boolean ignoreBecauseDigging, boolean blockClick) {
         if (!config.getBoolean("checks.autoclicker.enabled")) {
             return;
         }
@@ -40,7 +40,7 @@ public final class AutoClickerService {
             return;
         }
         ClickHistory history = histories.computeIfAbsent(player.getUniqueId(), id -> new ClickHistory());
-        history.addClick(now);
+        history.addClick(now, blockClick);
 
         if (config.getBoolean("checks.autoclicker.cps.enabled")) {
             evaluateCps(player, history, now);
@@ -57,9 +57,23 @@ public final class AutoClickerService {
     }
 
     public void handleClick(Player player, long now) {
-        handleClick(player, now, false);
+        handleClick(player, now, false, false);
     }
 
+    /** Evaluate CPS
+     *
+     * This check works by monitoring the player's CPS and looking for
+     * a number higher than the peak value
+     *
+     * We count clicks by watching for a mix of ARM_ANIMATION packets
+     * and START_DESTROY_BLOCK and ABORT/STOP, with debounce times
+     * mixed in to prevent false positives when players switch between blocks
+     * while holding down left click
+     *
+     * @param player
+     * @param history
+     * @param now
+     */
     private void evaluateCps(Player player, ClickHistory history, long now) {
         int cps = history.countClicksSince(now - 1000L);
         int threshold = config.getConfig().getInt("checks.autoclicker.cps.threshold", 15);
@@ -81,6 +95,19 @@ public final class AutoClickerService {
         }
     }
 
+    /** Evaluate Consistency
+     *
+     * This check evaluates the time between clicks and
+     * uses statistics like the standard deviation of the clicks
+     * to determine whether the player has an irregular clicking
+     * consistency
+     *
+     * Flags if CPS ≥ min‑cps and std‑dev ≤ max‑stddev (robotic timing).
+     *
+     * @param player
+     * @param history
+     * @param now
+     */
     private void evaluateConsistency(Player player, ClickHistory history, long now) {
         int minSamples = config.getConfig().getInt("checks.autoclicker.consistency.min-samples", 12);
         double maxStdDev = config.getConfig().getDouble("checks.autoclicker.consistency.max-stddev-ms", 3.5);
@@ -119,6 +146,18 @@ public final class AutoClickerService {
         }
     }
 
+    /** Evaluate Pattern
+     *
+     * Tracks the last N intervals of a player's clicking then
+     * calculates the most common interval and calculates the ratio
+     * of (most common intervals)/(total intervals)
+     *
+     * Flags if ratio is >= max-mode-ratio and CPS >= min-cps
+     *
+     * @param player
+     * @param history
+     * @param now
+     */
     private void evaluatePattern(Player player, ClickHistory history, long now) {
         int minSamples = config.getConfig().getInt("checks.autoclicker.pattern.min-samples", 16);
         double minCps = config.getConfig().getDouble("checks.autoclicker.pattern.min-cps", 9.0);
@@ -156,6 +195,17 @@ public final class AutoClickerService {
         }
     }
 
+    /** Tick Align Check
+     *
+     * This check only functions on non-block clicks and analyzes how
+     * frequently clicks align to server tick boundaries (50ms) with a tolerance t
+     *
+     * Flags if aligned ratio ≥ min‑aligned‑ratio and CPS ≥ min‑cps.
+     *
+     * @param player
+     * @param history
+     * @param now
+     */
     private void evaluateTickAlign(Player player, ClickHistory history, long now) {
         int minSamples = config.getConfig().getInt("checks.autoclicker.tick-align.min-samples", 20);
         double minCps = config.getConfig().getDouble("checks.autoclicker.tick-align.min-cps", 10.0);
@@ -163,10 +213,10 @@ public final class AutoClickerService {
         int toleranceMs = config.getConfig().getInt("checks.autoclicker.tick-align.tolerance-ms", 3);
         long cooldown = config.getConfig().getLong("checks.autoclicker.tick-align.cooldown-ms", 3000L);
 
-        if (!history.hasSamples(minSamples)) {
+        if (!history.hasNonBlockSamples(minSamples)) {
             return;
         }
-        long[] clicks = history.lastClicks(minSamples);
+        long[] clicks = history.lastNonBlockClicks(minSamples);
         if (clicks.length < minSamples) {
             return;
         }
@@ -255,13 +305,20 @@ public final class AutoClickerService {
 
     private static final class ClickHistory {
         private final Deque<Long> clicks = new ArrayDeque<>();
+        private final Deque<Long> nonBlockClicks = new ArrayDeque<>();
         private final Map<String, Long> lastAlert = new HashMap<>();
 
-        void addClick(long timestamp) {
+        void addClick(long timestamp, boolean blockClick) {
             clicks.addLast(timestamp);
+            if (!blockClick) {
+                nonBlockClicks.addLast(timestamp);
+            }
             long cutoff = timestamp - WINDOW_MILLIS;
             while (!clicks.isEmpty() && clicks.peekFirst() < cutoff) {
                 clicks.removeFirst();
+            }
+            while (!nonBlockClicks.isEmpty() && nonBlockClicks.peekFirst() < cutoff) {
+                nonBlockClicks.removeFirst();
             }
         }
 
@@ -291,11 +348,15 @@ public final class AutoClickerService {
             return intervals;
         }
 
-        long[] lastClicks(int count) {
-            int available = clicks.size();
+        boolean hasNonBlockSamples(int count) {
+            return nonBlockClicks.size() >= count;
+        }
+
+        long[] lastNonBlockClicks(int count) {
+            int available = nonBlockClicks.size();
             int start = Math.max(0, available - count);
             long[] result = new long[Math.min(count, available)];
-            Object[] arr = clicks.toArray();
+            Object[] arr = nonBlockClicks.toArray();
             int index = 0;
             for (int i = start; i < arr.length; i++) {
                 result[index++] = (Long) arr[i];

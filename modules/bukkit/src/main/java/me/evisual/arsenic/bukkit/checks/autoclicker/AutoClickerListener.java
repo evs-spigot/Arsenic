@@ -19,7 +19,7 @@ public final class AutoClickerListener implements Listener {
         if (event.getAnimationType() != PlayerAnimationType.ARM_SWING) {
             return;
         }
-        service.handleClick(event.getPlayer(), System.currentTimeMillis());
+        service.handleClick(event.getPlayer(), System.currentTimeMillis(), false, false);
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -28,6 +28,6 @@ public final class AutoClickerListener implements Listener {
             return;
         }
         Player damager = (Player) event.getDamager();
-        service.handleClick(damager, System.currentTimeMillis());
+        service.handleClick(damager, System.currentTimeMillis(), false, false);
     }
 }
