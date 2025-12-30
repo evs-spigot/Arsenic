@@ -85,11 +85,12 @@ public final class AutoClickerService {
             Map<String, String> placeholders = new HashMap<>();
             placeholders.put("cps", Integer.toString(cps));
             String detail = MessageFormatter.applyPlaceholders(detailTemplate, placeholders);
+            int vl = vlFromDelta((cps - threshold) * 2.0);
             alertService.publish(new Alert(player.getUniqueId(),
                     player.getName(),
                     name,
                     AlertSeverity.MEDIUM,
-                    cps,
+                    vl,
                     detail,
                     now));
         }
@@ -136,11 +137,12 @@ public final class AutoClickerService {
             placeholders.put("std", formatDouble(stddev));
             placeholders.put("cps", formatDouble(cps));
             String detail = MessageFormatter.applyPlaceholders(detailTemplate, placeholders);
+            int vl = vlFromDelta((cps - minCps) * 2.0);
             alertService.publish(new Alert(player.getUniqueId(),
                     player.getName(),
                     name,
                     AlertSeverity.LOW,
-                    (int) Math.round(cps),
+                    vl,
                     detail,
                     now));
         }
@@ -185,11 +187,13 @@ public final class AutoClickerService {
             placeholders.put("mode", formatDouble(modeRatio * 100.0) + "%");
             placeholders.put("cps", formatDouble(cps));
             String detail = MessageFormatter.applyPlaceholders(detailTemplate, placeholders);
+            double excess = (modeRatio - maxModeRatio) * 100.0;
+            int vl = vlFromDelta(excess);
             alertService.publish(new Alert(player.getUniqueId(),
                     player.getName(),
                     name,
                     AlertSeverity.MEDIUM,
-                    (int) Math.round(cps),
+                    vl,
                     detail,
                     now));
         }
@@ -233,11 +237,13 @@ public final class AutoClickerService {
             placeholders.put("aligned", formatDouble(alignedRatio * 100.0) + "%");
             placeholders.put("cps", formatDouble(cps));
             String detail = MessageFormatter.applyPlaceholders(detailTemplate, placeholders);
+            double excess = (alignedRatio - minAlignedRatio) * 100.0;
+            int vl = vlFromDelta(excess);
             alertService.publish(new Alert(player.getUniqueId(),
                     player.getName(),
                     name,
                     AlertSeverity.LOW,
-                    (int) Math.round(cps),
+                    vl,
                     detail,
                     now));
         }
@@ -301,6 +307,17 @@ public final class AutoClickerService {
 
     private String formatDouble(double value) {
         return String.format(java.util.Locale.US, "%.2f", value);
+    }
+
+    private int vlFromDelta(double delta) {
+        int vl = (int) Math.round(5.0 + delta);
+        if (vl < 1) {
+            return 1;
+        }
+        if (vl > 40) {
+            return 40;
+        }
+        return vl;
     }
 
     private static final class ClickHistory {

@@ -86,11 +86,13 @@ public final class ReachService {
             placeholders.put("reach", formatDouble(distance));
             placeholders.put("max", formatDouble(maxReach));
             String detail = MessageFormatter.applyPlaceholders(detailTemplate, placeholders);
+            double excess = (distance - maxReach) * 100.0;
+            int vl = vlFromDelta(excess);
             alertService.publish(new Alert(attacker.getUniqueId(),
                     attacker.getName(),
                     name,
                     AlertSeverity.HIGH,
-                    (int) Math.round(distance * 100.0),
+                    vl,
                     detail,
                     now));
         }
@@ -111,5 +113,16 @@ public final class ReachService {
 
     private String formatDouble(double value) {
         return String.format(java.util.Locale.US, "%.2f", value);
+    }
+
+    private int vlFromDelta(double delta) {
+        int vl = (int) Math.round(5.0 + delta);
+        if (vl < 1) {
+            return 1;
+        }
+        if (vl > 40) {
+            return 40;
+        }
+        return vl;
     }
 }
