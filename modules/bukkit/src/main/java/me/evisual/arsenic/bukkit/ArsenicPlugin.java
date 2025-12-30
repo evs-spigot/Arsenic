@@ -11,6 +11,8 @@ public final class ArsenicPlugin extends JavaPlugin {
     private ReportStore reportStore;
     private me.evisual.arsenic.bukkit.gui.ReportGuiService reportGuiService;
     private me.evisual.arsenic.bukkit.checks.autoclicker.AutoClickerService autoClickerService;
+    private me.evisual.arsenic.bukkit.checks.reach.ReachService reachService;
+    private me.evisual.arsenic.bukkit.checks.reach.EntityPositionTracker reachPositionTracker;
     private me.evisual.arsenic.bukkit.session.SessionService sessionService;
     private me.evisual.arsenic.bukkit.trust.TrustScoreService trustScoreService;
     private me.evisual.arsenic.bukkit.banwaves.BanWaveService banWaveService;
@@ -55,6 +57,16 @@ public final class ArsenicPlugin extends JavaPlugin {
             getServer().getPluginManager().registerEvents(new me.evisual.arsenic.bukkit.checks.autoclicker.AutoClickerListener(autoClickerService), this);
         }
 
+        reachService = new me.evisual.arsenic.bukkit.checks.reach.ReachService(this, configService, alertService);
+        reachPositionTracker = new me.evisual.arsenic.bukkit.checks.reach.EntityPositionTracker(this);
+        reachPositionTracker.start();
+        if (getServer().getPluginManager().getPlugin("ProtocolLib") != null) {
+            com.comphenix.protocol.ProtocolLibrary.getProtocolManager()
+                    .addPacketListener(new me.evisual.arsenic.bukkit.checks.reach.ReachPacketListener(this, reachService, reachPositionTracker));
+        } else {
+            getLogger().warning("ProtocolLib not found; reach detection is disabled.");
+        }
+
         if (banWaveService != null) {
             banWaveService.start();
         }
@@ -63,6 +75,9 @@ public final class ArsenicPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (reachPositionTracker != null) {
+            reachPositionTracker.stop();
+        }
         if (banWaveService != null) {
             banWaveService.stop();
         }

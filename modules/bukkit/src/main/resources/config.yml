@@ -42,6 +42,15 @@ checks:
       cooldown-ms: 3000
       name: "Autoclicker TickAlign"
       detail: "aligned={aligned} cps={cps}"
+  reach:
+    enabled: true
+    max-reach: 3.05 # avoid changing
+    max-reach-sprinting: 3.50 # avoid changing
+    hitbox-expansion: 0.10 # avoid changing
+    cooldown-ms: 1500
+    name: "Reach"
+    detail: "reach={reach} max={max}"
+    debug: false
 
 trust-score:
   base: 100
